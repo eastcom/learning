@@ -1,0 +1,59 @@
+/************************************************************************************/
+
+node命令:
+
+npm list 查看当前项目所有安装模块
+
+npm init 会引导你创建一个package.json文件，包括名称、版本、作者这些信息等
+
+npm root -g 查看全局的包的安装路径
+
+node-debug --web-port=8888 app 启动node-inspector调试app.js，并指定8888端口
+
+babel src -d ./ 将src目录下的所有js文件编译成ES5语法的js文件，并输出到src同级目录下
+
+babel src -d build 将src目录下的所有js文件编译成ES5语法的js文件，并输出到build目录下
+
+babel src/app.js -o build/output.js 指定输出目录和名称,用于单个js文件编译
+
+supervisor ./bin/www 启动expresss项目，并监测项目改动，自动重启服务器
+
+grunt 执行默认任务
+
+grunt build 执行build下的所有任务
+
+grunt build:copy 执行build下名称为copy的子任务
+
+/************************************************************************************/
+
+/************************************************************************************/
+
+git命令:
+
+项目提交：建成仓库以后，在gitshell里，切换到自己的目录下,执行命令 
+
+git remote rm origin
+
+git remote add origin http://github.com/*.git (如项目已经存在，该步可以省略)
+
+git push -u origin master 
+
+git commit -a
+
+git push
+
+从项目中移除文件: git rm readme.txt
+
+把文件从 Git 仓库中删除（亦即从暂存区域移除），但仍然希望保留在当前工作目录中: git rm --cached readme.txt
+
+
+查看提交历史: git log  常用 -p 选项展开显示每次提交的内容差异，用 -2 则仅显示最近的两次更新,如: git log -p -2 
+
+查看clone的项目信息: git remote show origin
+
+更新clone的项目: git fetch http://github.com/*.git
+
+/************************************************************************************/
+
+http://localhost:7080/sysmng/asynchronizeGetSysCommon?name=commonManager&node=root&sort=%5B%7B%22property%22%3A%22order%22%2C%22direction%22%3A%22ASC%22%7D%5D
+
