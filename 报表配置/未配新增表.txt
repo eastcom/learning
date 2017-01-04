@@ -1,0 +1,27 @@
+svn://hzsvn.eastcom-sw.com/INAS_PRODUCT/DocumentLib/10DataManage/4_仓库层数据(DW)/4_集中性能管理系统_仓库层数据(DW)_Oracle_网管.xlsx
+
+增加模型：
+资源域_性能_接口_流量_5分钟 DW_FT_RE_ST_INTERFACE_5M
+资源域_性能_接口_流量_小时 DW_FT_RE_ST_INTERFACE_H
+资源域_性能_接口_流量_天 DW_FT_RE_ST_INTERFACE_D
+
+对应数据网管：
+NHM_INTERFACE_KPI
+NHM_INTERFACE_KPI_HOUR
+NHM_INTERFACE_KPI_DAY
+
+O_RM_DEVICE
+O_RM_INTERFACE
+
+用到的表:
+NHM_INTERFACE_KPI
+RM_DEVICE
+RM_INTERFACE
+
+
+ipnet.sh_report_user_port  ipnet.sh_report_devicemodule
+对应
+ipmsdw.o_sh_report_user_port ipmsdw.o_sh_report_devicemodule
+
+
+IPNET.CMNET_EXPORTS_ANALYSIS 对应 ipmsdm.DM_CMNET_EXPORTS_ANALYSIS_M

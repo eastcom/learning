@@ -1,0 +1,108 @@
+select 
+to_char(to_date(timeid,'yyyymmddhh24miss'),'yyyy-mm-dd') as TIMEID,
+UG,TOTAL,SN,REQ,CLICK_RATE from ( select a.*,row_number() over (order by timeid,ug) as rn  
+from
+ (select t1.timeid timeid,t1.USER_GROUP ug,t2.total,t1.SUPPLIER_NAME sn,t1.req,t1.req*1.0 / t2.total*100  click_rate 
+from (select timeid,user_group,SUPPLIER_NAME,sum(request_cnt) as req from ipmsdm.DM_DNSLOG_UG_D where timeid=to_char(trunc(sysdate-2),'yyyymmdd')||'0000' 
+group by timeid,user_group,SUPPLIER_NAME) t1, (select timeid,user_group,sum(request_cnt) as total from ipmsdm.DM_DNSLOG_UG_D where 
+timeid=to_char(trunc(sysdate-2),'yyyymmdd')||'0000' group by timeid,user_group) t2 where t1.timeid=t2.timeid and t1.user_group=t2.user_group) a ) b  where 1=1 
+
+      <if test=" '@isContinue'=='t' ">
+           and TIMEID between to_number(#startTime#) and to_number(#endTime#)
+       </if>
+       <if test=" '@isContinue'=='f' ">
+           and TIMEID in (#discteteTime#)
+       </if>  
+     <jdbcType name="discteteTime" type="array-char"/>
+
+
+
+trunc(Dttm,'mi')
+
+ <if test=" '@isContinue'=='t' ">
+              and data_time between to_date(#startTime#,'yyyymmddhh24miss') and            to_date(#endTime#,'yyyymmddhh24miss')
+       </if>
+       <if test=" '@isContinue'=='f' ">
+           and data_time in (#discteteTime#)
+       </if> 
+<jdbcType name="discteteTime" type="array-date"/>
+
+
+
+
+<select id="resultMapping">
+ --KPI_004=VoLTE始呼接续时长(Volte to Volte) --KPI_017=PCRF消息处理能力利用率(%) 
+</select>
+
+
+
+<if test=" '@isContinue'=='t' ">
+           and TIME_ID between to_number(#startTime#) and to_number(#endTime#)
+       </if>
+       <if test=" '@isContinue'=='f' ">
+           and TIME_ID in (#discteteTime#)
+       </if> 
+
+/********************************************************/
+<select id="resultMapping">
+ --KPI_004=SCTP偶联数据块重传率(%) --KPI_017=PCRF消息处理能力利用率(%) --KPI_020=PCRF实际控制的平均会话数与PCRF最大会话控制能力的比值 --KPI_022=PCRF实际控制的峰值会话数与PCRF最大会话控制能力的比值
+</select>
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='min' ">ipmsdm.DM_VOLTE_RE_NE_PCRF_NEP_15M</if>
+    <if test=" '@timeType'=='hour' ">ipmsdm.DM_VOLTE_RE_NE_PCRF_NEP_H</if>
+    <if test=" '@timeType'=='day' ">ipmsdm.DM_VOLTE_RE_NE_PCRF_NEP_D</if>
+    <if test=" '@timeType'=='week' ">ipmsdm.DM_VOLTE_RE_NE_PCRF_NEP_W</if>
+    <if test=" '@timeType'=='month' ">ipmsdm.DM_VOLTE_RE_NE_PCRF_NEP_M</if>
+</select>
+
+
+    select
+TIME_ID as "报表日期",
+USER_LABEL as "网元名称",
+KPI_001 as "PCRF平均负荷",
+KPI_002 as "SCTP偶联发送数据块数",
+KPI_003 as "SCTP偶联重发数据块数",
+KPI_004 as "KPI_004",
+KPI_005 as "CC发起请求次数",
+KPI_006 as "CC发起成功次数",
+KPI_007 as "策略控制发起成功率(%)",
+KPI_008 as "CC更新请求次数",
+KPI_009 as "CC更新成功次数",
+KPI_010 as "策略控制更新成功率(%)",
+KPI_011 as "RA请求次数",
+KPI_012 as "RA成功次数",
+KPI_013 as "重新鉴权成功率(%)",
+KPI_014 as "CC结束请求次数",
+KPI_015 as "CC结束成功次数",
+KPI_016 as "策略控制结束成功率(%)",
+KPI_017 as "KPI_017",
+KPI_018 as "最大在线会话数",
+KPI_019 as "平均Gx会话数",
+KPI_020 as "KPI_020",
+KPI_021 as "最大Gx会话数",
+KPI_022 as "KPI_022"
+
+     from <included id="tableChooseSE"/> where 1=1 
+
+	 
+       <if test=" '@isContinue'=='t' ">
+           and TIME_ID between to_number(#startTime#) and to_number(#endTime#)
+       </if>
+       <if test=" '@isContinue'=='f' ">
+           and TIME_ID in (#discteteTime#)
+       </if> 
+<isNotEmpty property="qry_0">
+    and USER_LABEL like '%$qry_0$%'
+  </isNotEmpty>
+
+
+/*************************************/
+<select id="resultMapping">
+--TIMEID=时间 --NENAME=网元名称 --NUMINRELAYCALL=入局中继电路群试呼次数 --NUMINRELAYANSWER=入局中继电路群应答次数 --RATEINRELAYSUCCESS =入局中继电路群接通率 --NUMOUTRELAYCALL=出局中继电路群试呼次数 --NUMOUTRELAYANSWER=出局中继电路群应答次数 --RATEOUTRELAYCALLCOMPLET=出局中继电路群接通率
+
+</select>
+
+
+
+
+
