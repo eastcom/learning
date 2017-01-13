@@ -375,3 +375,453 @@ FROM <included id="tableChooseSE"/> where 1=1
 <jdbcType name="discteteTime" type="array-char">
   '@value'.substr(0,10)
 </jdbcType>
+
+//资源域_性能_行业网关_基于帐号的端到端业务统计
+<jdbcType name="discteteTime" type="array-date"/>
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_E2E_H</if>
+    <if test=" '@timeType'=='day' ">IPMSDW.DW_FT_RE_ST_HYWG_E2E_D</if>
+    <if test=" '@timeType'=='week' ">IPMSDW.DW_FT_RE_ST_HYWG_E2E_W</if>
+    <if test=" '@timeType'=='month' ">IPMSDW.DW_FT_RE_ST_HYWG_E2E_M</if>
+</select>
+
+<select id="resultMapping">
+    --START_TIME=开始时间 --END_TIME=结束时间 --NODE_ID=统计节点 --UP_ITEM_CODE=上级网元设备代码 --DOWN_ITEM_CODE=下级网元设备代码 --UP_MSG_TOTAL_SUM=从上级网元收到的消息总数 --UP_MSG_SUCC_SUM=从上级网元收到的成功消息总数 --TO_DOWN_MSG_TOTAL_SUM=转发到下级网元的消息总数 --TO_DOWN_MSG_SUCC_SUM=转发到下级网元的成功消息总数 --TO_DOWN_MSG_FAIL_SUM=转发到下级网元失败数(不含超时) --RECV_DOWN_RPT_TOTAL_SUM=接收到下级网元回执数 --RECV_DOWN_RPT_SUCC_SUM=接收到下级网元成功回执数 --TO_ORIGN_RPT_SUCC_SUM=转发回执到源网元数 --TO_ORIGN_RPT_FAIL_SUM=转发成功回执到源网元数
+</select>
+
+SELECT
+  <if1 test=" '@timeType'=='hour' "> 
+    to_char(START_TIME,'yyyy-MM-dd HH24:mi') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    to_char(START_TIME,'yyyy-mm-dd') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    to_char(START_TIME,'yyyy-iw') || '周' as START_TIME,
+    to_char(END_TIME,'yyyy-iw') || '周' as END_TIME,
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    to_char(START_TIME,'yyyy-mm') || '月' as START_TIME,
+    to_char(END_TIME,'yyyy-MM') || '月' as END_TIME,
+  </if3>
+  
+  NODE_ID,
+  UP_ITEM_CODE,
+  DOWN_ITEM_CODE,
+  UP_MSG_TOTAL_SUM,
+  UP_MSG_SUCC_SUM,
+  TO_DOWN_MSG_TOTAL_SUM,
+  TO_DOWN_MSG_SUCC_SUM,
+  TO_DOWN_MSG_FAIL_SUM,
+  RECV_DOWN_RPT_TOTAL_SUM,
+  RECV_DOWN_RPT_SUCC_SUM,
+  TO_ORIGN_RPT_SUCC_SUM,
+  TO_ORIGN_RPT_FAIL_SUM
+FROM <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in (#discteteTime#)
+</if>
+<if test=" '@isContinue'=='t' ">
+
+  <if1 test=" '@timeType'=='hour' "> 
+  and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    and to_char(start_time,'yyyyiw')||'000000' between #startTime# and #endTime#
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyymm') and to_date(substr(#endTime#,0,6),'yyyymm')
+  </if3>
+
+</if>
+
+
+
+
+
+//EC/SI到本省SMSC及外省网关的MT、MO业务量统计
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_MTMO_H</if>
+    <if test=" '@timeType'=='day' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_MTMO_D</if>
+    <if test=" '@timeType'=='week' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_MTMO_W</if>
+    <if test=" '@timeType'=='month' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_MTMO_M</if>
+</select>
+
+<select id="resultMapping">
+    --START_TIME=开始时间 --END_TIME=结束时间 --EC_ID=ec/si企业代码 --EC_SERVICE_CODE=ec/si服务代码 --ECTOGW_MT_TOTAL_CNT=ec/si向网关提交mt总量 --GWTOEC_MO_TOTAL_CNT=网关向ec/si发送mo总量 --ECTOSC_SEND_TOTAL_CNT=ec向本省网关提交mt-发送总量 --ECTOSC_SEND_SUCC_CNT=ec向本省网关提交mt-发送成功量 --ECTOSC_RECV_RPT_TOTAL_CNT=ec向本省网关提交mt-状态报告总量 --ECTOSC_RECV_RPT_SUCC_CNT=ec向本省网关提交mt-成功状态报告量 --SCTOEC_SEND_TOTAL_CNT=本省网关向ec发送mo-发送总量 --SCTOEC_SEND_SUCC_CNT=本省网关向ec发送mo-发送成功量 --GW_SMSC_RPT_TOTAL_CNT=本省网关向ec发送mo-状态报告总量 --GW_SMSC_RPT_SUCC_CNT=本省网关向ec发送mo-成功状态报告量 --ECTOGW_SEND_TOTAL_CNT=ec向异省网关前转mt-前转总量 --ECTOGW_SEND_SUCC_CNT=ec向异省网关前转mt-前转成功量 --ECTOGW_RECV_RPT_TOTAL_CNT=ec向异省网关前转mt-状态报告总量 --ECTOGW_RECV_RPT_SUCC_CNT=ec向异省网关前转mt-成功状态报告量 --GWTOEC_SEND_TOTAL_CNT=异省网关向ec前转mo-前转总量 --GWTOEC_SEND_SUCC_CNT=异省网关向ec前转mo-前转成功量 --GW_GW_RPT_TOTAL_CNT=异省网关向ec前转mo-状态报告总量 --GW_GW_RPT_SUCC_CNT=异省网关向ec前转mo-成功状态报告量
+</select>
+SELECT
+  <if1 test=" '@timeType'=='hour' "> 
+    to_char(START_TIME,'yyyy-MM-dd HH24:mi') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    to_char(START_TIME,'yyyy-mm-dd') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    to_char(START_TIME,'yyyy-iw') || '周' as START_TIME,
+    to_char(END_TIME,'yyyy-iw') || '周' as END_TIME,
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    to_char(START_TIME,'yyyy-mm') || '月' as START_TIME,
+    to_char(END_TIME,'yyyy-MM') || '月' as END_TIME,
+  </if3>
+  
+  EC_ID,
+  EC_SERVICE_CODE,
+  ECTOGW_MT_TOTAL_CNT,
+  GWTOEC_MO_TOTAL_CNT,
+  ECTOSC_SEND_TOTAL_CNT,
+  ECTOSC_SEND_SUCC_CNT,
+  ECTOSC_RECV_RPT_TOTAL_CNT,
+  ECTOSC_RECV_RPT_SUCC_CNT,
+  SCTOEC_SEND_TOTAL_CNT,
+  SCTOEC_SEND_SUCC_CNT,
+  GW_SMSC_RPT_TOTAL_CNT,
+  GW_SMSC_RPT_SUCC_CNT,
+  ECTOGW_SEND_TOTAL_CNT,
+  ECTOGW_SEND_SUCC_CNT,
+  ECTOGW_RECV_RPT_TOTAL_CNT,
+  ECTOGW_RECV_RPT_SUCC_CNT,
+  GWTOEC_SEND_TOTAL_CNT,
+  GWTOEC_SEND_SUCC_CNT,
+  GW_GW_RPT_TOTAL_CNT,
+  GW_GW_RPT_SUCC_CNT
+FROM <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in (#discteteTime#)
+</if>
+<if test=" '@isContinue'=='t' ">
+
+  <if1 test=" '@timeType'=='hour' "> 
+  and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyydd') and to_date(substr(#endTime#,0,6),'yyyydd')
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyydd') and to_date(substr(#endTime#,0,6),'yyyydd')
+  </if3>
+
+</if>
+
+//全网EC/SI与异省网关间业务量统计
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_OGW_H</if>
+    <if test=" '@timeType'=='day' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_OGW_D</if>
+    <if test=" '@timeType'=='week' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_OGW_W</if>
+    <if test=" '@timeType'=='month' ">IPMSDW.DW_FT_RE_ST_HYWG_ECSI_OGW_M</if>
+</select>
+
+<select id="resultMapping">
+    --START_TIME=开始时间 --END_TIME=结束时间 --EC_ID=EC/SI企业代码 --NODE_ID=节点号 --OTHER_GW_NAME=异省网关名称 --OTHER_GW_CODE=异省网关设备编号 --EC_SERVICE_CODE=ec/si服务代码 --ECTOGW_MT_TOTAL_CNT=ec/si向网关提交mt总量 --GWTOEC_MO_TOTAL_CNT=网关向ec/si发送mo总量 --ECTOSC_SEND_TOTAL_CNT=ec向本省网关提交mt-发送总量 --ECTOSC_SEND_SUCC_CNT=ec向本省网关提交mt-发送成功量 --ECTOSC_RECV_RPT_TOTAL_CNT=ec向本省网关提交mt-状态报告总量 --ECTOSC_RECV_RPT_SUCC_CNT=ec向本省网关提交mt-成功状态报告量 --SCTOEC_SEND_TOTAL_CNT=本省网关向ec发送mo-发送总量 --SCTOEC_SEND_SUCC_CNT=本省网关向ec发送mo-发送成功量 --GW_SMSC_RPT_TOTAL_CNT=本省网关向ec发送mo-状态报告总量 --GW_SMSC_RPT_SUCC_CNT=本省网关向ec发送mo-成功状态报告量 --ECTOGW_SEND_TOTAL_CNT=ec向异省网关前转mt-前转总量 --ECTOGW_SEND_SUCC_CNT=ec向异省网关前转mt-前转成功量 --ECTOGW_RECV_RPT_TOTAL_CNT=ec向异省网关前转mt-状态报告总量 --ECTOGW_RECV_RPT_SUCC_CNT=ec向异省网关前转mt-成功状态报告量 --GWTOEC_SEND_TOTAL_CNT=异省网关向ec前转mo-前转总量 --GWTOEC_SEND_SUCC_CNT=异省网关向ec前转mo-前转成功量 --GW_GW_RPT_TOTAL_CNT=异省网关向ec前转mo-状态报告总量 --GW_GW_RPT_SUCC_CNT=异省网关向ec前转mo-成功状态报告量
+</select>
+SELECT
+  <if1 test=" '@timeType'=='hour' "> 
+    to_char(START_TIME,'yyyy-MM-dd HH24:mi') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    to_char(START_TIME,'yyyy-mm-dd') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    to_char(START_TIME,'yyyy-iw') || '周' as START_TIME,
+    to_char(END_TIME,'yyyy-iw') || '周' as END_TIME,
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    to_char(START_TIME,'yyyy-mm') || '月' as START_TIME,
+    to_char(END_TIME,'yyyy-MM') || '月' as END_TIME,
+  </if3>
+  
+  EC_ID,
+  NODE_ID,
+  EC_SERVICE_CODE,
+  OTHER_GW_NAME,
+  OTHER_GW_CODE,  
+  ECTOGW_SEND_TOTAL_CNT,
+  ECTOGW_SEND_SUCC_CNT,
+  ECTOGW_RECV_RPT_TOTAL_CNT,
+  ECTOGW_RECV_RPT_SUCC_CNT,
+  GWTOEC_SEND_TOTAL_CNT,
+  GWTOEC_SEND_SUCC_CNT
+FROM <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in (#discteteTime#)
+</if>
+<if test=" '@isContinue'=='t' ">
+
+  <if1 test=" '@timeType'=='hour' "> 
+  and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyydd') and to_date(substr(#endTime#,0,6),'yyyydd')
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyydd') and to_date(substr(#endTime#,0,6),'yyyydd')
+  </if3>
+
+</if>
+
+
+//本省短信中心与异省网关间业务量统计
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_SMSC_OGW_H</if>
+    <if test=" '@timeType'=='day' ">IPMSDW.DW_FT_RE_ST_HYWG_SMSC_OGW_D</if>
+    <if test=" '@timeType'=='week' ">IPMSDW.DW_FT_RE_ST_HYWG_SMSC_OGW_W</if>
+    <if test=" '@timeType'=='month' ">IPMSDW.DW_FT_RE_ST_HYWG_SMSC_OGW_M</if>
+</select>
+
+<select id="resultMapping">
+    --START_TIME=开始时间 --END_TIME=结束时间 --EC_ID=EC/SI企业代码 --NODE_ID=节点号 --SMC_NAME=短信中心名称 --SMC_CODE=短信中心设备编号 --OTHER_GW_NAME=异省网关名称 --OTHER_GW_CODE=异省网关设备编号 --SCTOGW_MO_TOTAL_CNT=前转mo总量 --SCTOGW_MO_SUCC_CNT=前转mo成功量 --SCTOGW_MO_TOTAL_RPT_CNT=前转mo状态报告总量 --SCTOGW_MO_SUCC_RPT_CNT=前转mo成功状态报告总量 --GWTOSC_MT_TOTAL_CNT --前转mt总量 --GWTOSC_MT_SUCC_CNT=前转mt成功量 --GWTOSC_MT_TOTAL_RPT_CNT=前转mt状态报告总量 --GWTOSC_MT_SUCC_RPT_CNT=前转mt成功状态报告总量
+</select>
+SELECT
+  <if1 test=" '@timeType'=='hour' "> 
+    to_char(START_TIME,'yyyy-MM-dd HH24:mi') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    to_char(START_TIME,'yyyy-mm-dd') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    to_char(START_TIME,'yyyy-iw') || '周' as START_TIME,
+    to_char(END_TIME,'yyyy-iw') || '周' as END_TIME,
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    to_char(START_TIME,'yyyy-mm') || '月' as START_TIME,
+    to_char(END_TIME,'yyyy-MM') || '月' as END_TIME,
+  </if3>
+  
+  NODE_ID,
+  SMC_NAME,
+  SMC_CODE,
+  OTHER_GW_NAME,
+  OTHER_GW_CODE,
+  SCTOGW_MO_TOTAL_CNT,
+  SCTOGW_MO_SUCC_CNT,
+  SCTOGW_MO_TOTAL_RPT_CNT,
+  SCTOGW_MO_SUCC_RPT_CNT,
+  GWTOSC_MT_TOTAL_CNT,
+  GWTOSC_MT_SUCC_CNT,
+  GWTOSC_MT_TOTAL_RPT_CNT,
+  GWTOSC_MT_SUCC_RPT_CNT
+FROM <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in (#discteteTime#)
+</if>
+<if test=" '@isContinue'=='t' ">
+
+  <if1 test=" '@timeType'=='hour' "> 
+  and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    and to_char(start_time,'yyyyiw')||'000000' between #startTime# and #endTime#
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyymm') and to_date(substr(#endTime#,0,6),'yyyymm')
+  </if3>
+
+</if>
+
+//本地网关与异省网关间业务量统计
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_GW_OGW_H</if>
+    <if test=" '@timeType'=='day' ">IPMSDW.DW_FT_RE_ST_HYWG_GW_OGW_D</if>
+    <if test=" '@timeType'=='week' ">IPMSDW.DW_FT_RE_ST_HYWG_GW_OGW_W</if>
+    <if test=" '@timeType'=='month' ">IPMSDW.DW_FT_RE_ST_HYWG_GW_OGW_M</if>
+</select>
+
+<select id="resultMapping">
+    --START_TIME=开始时间 --END_TIME=结束时间 --REMOTE_GW_NAME=异省网关名称 --GW_CODE=异省网关设备编号 --LFRMT_SEND_SUM=本省前转异省mt－发送总量 --LFRMT_SEND_SUCC_SUM=本省前转异省mt－发送成功量 --LFRMT_RECV_RPT_SUM=本省前转异省mt－状态报告总量 --LFRMT_RECV_RPT_SUCC_SUM=本省前转异省mt－成功状态报告量 --LFRMO_SEND_SUM=本省前转异省mo－发送总量 --LFRMO_SEND_SUCC_SUM=本省前转异省mo－发送成功量 --LFRMO_RECV_RPT_SUM=本省前转异省mo－状态报告总量 --LFRMO_RECV_RPT_SUCC_SUM=本省前转异省mo－成功状态报告量 --RFLMT_SEND_SUM=异省前转本省mt－发送总量 --RFLMT_SEND_SUCC_SUM=异省前转本省mt－发送成功量 --RFLMT_RECV_RPT_SUM=异省前转本省mt－状态报告总量 --RFLMT_RECV_RPT_SUCC_SUM=NUMBER --RFLMO_SEND_SUM=异省前转本省mo－发送总量 --RFLMO_SEND_SUCC_SUM=异省前转本省mo－发送成功量 --RFLMO_RECV_RPT_SUM=异省前转本省mo－状态报告总量 --RFLMO_RECV_RPT_SUCC_SUM=异省前转本省mo－成功状态报告量
+</select>
+SELECT
+  <if1 test=" '@timeType'=='hour' "> 
+    to_char(START_TIME,'yyyy-MM-dd HH24:mi') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    to_char(START_TIME,'yyyy-mm-dd') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    to_char(START_TIME,'yyyy-iw') || '周' as START_TIME,
+    to_char(END_TIME,'yyyy-iw') || '周' as END_TIME,
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    to_char(START_TIME,'yyyy-mm') || '月' as START_TIME,
+    to_char(END_TIME,'yyyy-MM') || '月' as END_TIME,
+  </if3>
+  
+  REMOTE_GW_NAME,
+  GW_CODE,
+  LFRMT_SEND_SUM,
+  LFRMT_SEND_SUCC_SUM,
+  LFRMT_RECV_RPT_SUM,
+  LFRMT_RECV_RPT_SUCC_SUM,
+  LFRMO_SEND_SUM,
+  LFRMO_SEND_SUCC_SUM,
+  LFRMO_RECV_RPT_SUM,
+  LFRMO_RECV_RPT_SUCC_SUM,
+  RFLMT_SEND_SUM,
+  RFLMT_SEND_SUCC_SUM,
+  RFLMT_RECV_RPT_SUM,
+  RFLMT_RECV_RPT_SUCC_SUM,
+  RFLMO_SEND_SUM,
+  RFLMO_SEND_SUCC_SUM,
+  RFLMO_RECV_RPT_SUM,
+  RFLMO_RECV_RPT_SUCC_SUM
+FROM <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in (#discteteTime#)
+</if>
+<if test=" '@isContinue'=='t' ">
+
+  <if1 test=" '@timeType'=='hour' "> 
+  and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    and to_char(start_time,'yyyyiw')||'000000' between #startTime# and #endTime#
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyymm') and to_date(substr(#endTime#,0,6),'yyyymm')
+  </if3>
+
+</if>
+
+//外地EC/SI统计
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_OECSI_H</if>
+    <if test=" '@timeType'=='day' ">IPMSDW.DW_FT_RE_ST_HYWG_OECSI_D</if>
+    <if test=" '@timeType'=='week' ">IPMSDW.DW_FT_RE_ST_HYWG_OECSI_W</if>
+    <if test=" '@timeType'=='month' ">IPMSDW.DW_FT_RE_ST_HYWG_OECSI_M</if>
+</select>
+
+<select id="resultMapping">
+    --START_TIME=开始时间 --END_TIME=结束时间 --DEV_CODE=目的网关代码 --NODE_ID=节点号 --EC_ID=ec/si企业代码 --SEND_FWD_MO_SUCC=mo前转成功 --SEND_FWD_MO_FAIL=mo前转失败 --RECV_FWD_MT_SUCC=接收mt前转成功 --RECV_FWD_MT_FAIL=接收mt前转失败
+</select>
+SELECT
+  <if1 test=" '@timeType'=='hour' "> 
+    to_char(START_TIME,'yyyy-MM-dd HH24:mi') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    to_char(START_TIME,'yyyy-mm-dd') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    to_char(START_TIME,'yyyy-iw') || '周' as START_TIME,
+    to_char(END_TIME,'yyyy-iw') || '周' as END_TIME,
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    to_char(START_TIME,'yyyy-mm') || '月' as START_TIME,
+    to_char(END_TIME,'yyyy-MM') || '月' as END_TIME,
+  </if3>
+  
+  DEV_CODE,
+  NODE_ID,
+  EC_ID,
+  SEND_FWD_MO_SUCC,
+  SEND_FWD_MO_FAIL,
+  RECV_FWD_MT_SUCC,
+  RECV_FWD_MT_FAIL
+FROM <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in (#discteteTime#)
+</if>
+<if test=" '@isContinue'=='t' ">
+
+  <if1 test=" '@timeType'=='hour' "> 
+  and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    and to_char(start_time,'yyyyiw')||'000000' between #startTime# and #endTime#
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyymm') and to_date(substr(#endTime#,0,6),'yyyymm')
+  </if3>
+
+</if>
+
+
+//网关帐号流量统计
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_FLUX_H</if>
+    <if test=" '@timeType'=='day' ">IPMSDW.DW_FT_RE_ST_HYWG_FLUX_D</if>
+    <if test=" '@timeType'=='week' ">IPMSDW.DW_FT_RE_ST_HYWG_FLUX_W</if>
+    <if test=" '@timeType'=='month' ">IPMSDW.DW_FT_RE_ST_HYWG_FLUX_M</if>
+</select>
+
+<select id="resultMapping">
+    --START_TIME=开始时间 --END_TIME=结束时间 --DEV_CODE=目的网关代码 --RECV_SM_ALL_NUM=从账号收到短消息量(条) --RECV_SM_SUCC_NUM=从账号收到短消息成功量(条) --SEND_SM_ALL_NUM=给账号发送短消息量(条) --SEND_SM_SUCC_NUM=给账号发送短消息成功量(条) --IN_FLUX_NUM=入峰值流量(条/秒) --IN_FLUX_LIMIT=入流量限制值(条/秒) --IN_REJECT_NUM=被拒入短信量(条) --OUT_FLUX_NUM=出峰值流量(条/秒) --OUT_FLUX_LIMIT=出流量限制值(条/秒) --OUT_REJECT_NUM=被拒出短信量(条)
+</select>
+SELECT
+  <if1 test=" '@timeType'=='hour' "> 
+    to_char(START_TIME,'yyyy-MM-dd HH24:mi') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    to_char(START_TIME,'yyyy-mm-dd') as START_TIME,
+    to_char(END_TIME,'yyyy-MM-dd HH24:mi:ss') as END_TIME,
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    to_char(START_TIME,'yyyy-iw') || '周' as START_TIME,
+    to_char(END_TIME,'yyyy-iw') || '周' as END_TIME,
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    to_char(START_TIME,'yyyy-mm') || '月' as START_TIME,
+    to_char(END_TIME,'yyyy-MM') || '月' as END_TIME,
+  </if3>
+  
+  DEV_CODE,
+  RECV_SM_ALL_NUM,
+  RECV_SM_SUCC_NUM,
+  SEND_SM_ALL_NUM,
+  SEND_SM_SUCC_NUM,
+  IN_FLUX_NUM,
+  IN_FLUX_LIMIT,
+  IN_REJECT_NUM,
+  OUT_FLUX_NUM,
+  OUT_FLUX_LIMIT,
+  OUT_REJECT_NUM
+FROM <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in (#discteteTime#)
+</if>
+<if test=" '@isContinue'=='t' ">
+
+  <if1 test=" '@timeType'=='hour' "> 
+  and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if1>
+  <if2 test=" '@timeType'=='day' "> 
+    and START_TIME between to_date(#startTime#,'yyyy-MM-dd HH24:mi') and to_date(#endTime#,'yyyy-MM-dd HH24:mi')
+  </if2>
+ <if4 test=" '@timeType'=='week' ">
+    and to_char(start_time,'yyyyiw')||'000000' between #startTime# and #endTime#
+  </if4>
+  <if3 test=" '@timeType'=='month' ">
+    and START_TIME between to_date(substr(#startTime#,0,6),'yyyymm') and to_date(substr(#endTime#,0,6),'yyyymm')
+  </if3>
+
+</if>
