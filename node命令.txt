@@ -53,6 +53,9 @@ git push
 
 更新clone的项目: git fetch http://github.com/*.git
 
+用远程代码覆盖本地代码: git pull origin master
+
+
 /************************************************************************************/
 
 http://localhost:7080/sysmng/asynchronizeGetSysCommon?name=commonManager&node=root&sort=%5B%7B%22property%22%3A%22order%22%2C%22direction%22%3A%22ASC%22%7D%5D
