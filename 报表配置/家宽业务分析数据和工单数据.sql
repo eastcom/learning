@@ -102,8 +102,8 @@ from <included id="tableChooseSE"/> where 1=1
 select *
 from <included id="tableChooseSE"/> where 1=1 
 <if test=" '@isContinue'=='f' ">
-	and to_char(STAT_TIME,'yyyyMMddHH24mi') in (#discteteTime#)
+	and to_char(to_date(starttimemonth,'yyyy-MM'),'yyyyMM') in (#discteteTime#)
 </if>
 <jdbcType name="discteteTime" type="array-char">
-	'@value'.substr(0,12)
+	'@value'.substr(0,6)
 </jdbcType>
