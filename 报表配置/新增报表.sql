@@ -131,3 +131,500 @@ WHERE 1=1
   and START_TIME in(#discteteTime#)
 </if>        
 <jdbcType name="discteteTime" type="array-date"/>
+
+//TD_MMS业务KPI接通率统计指标组
+<select id="tableChooseSE">    
+     <if test=" '@timeType'=='min' ">IPMSDW.O_RE_ST_HYWG_N31_12_5M</if>
+     <if test=" '@timeType'=='hour' ">IPMSDW.DW_FT_RE_ST_HYWG_N31_12_H</if>
+     <if test=" '@timeType'=='day' ">IPMSDW.O_RE_ST_MMS_KPI_D</if>   
+</select>
+
+
+<select id="resultMapping">
+  --STARTTIME=开始时间 --DATASOURCEID=资源编码 --ENDTIME=结束时间 --START_TIME=开始时间(兼容数据网管) --END_TIME=结束时间(兼容数据网管) --MMS_SEND_NUM=MMS发送总条数 --MMS_TOP_NUM=MMS忙时业务量 --MMS_REGISTER_USER_NUM=MMS注册用户总数 --USE_MMS_USER_NUM=本时段使用用户数 --MMS_ALBUM_NUM=转梦网相册条数 --MMS_ALBUM_SUCC_NUM=转梦网相册成功条数 --MMS_ALBUM_SUCC_RATIO=转梦网相册成功率 --MMS_SUBMIT_NUM_2=MMS发送总条数-2 --MMS_DELV_NUM_2=MMS接收总条数-2 --MMS_NETWOER_SUBMIT_FAIL_NUM=网络失败提交数 --MMS_USER_SUBMIT_FAIL_NUM=用户失败提交数 --MMS_NETWORK_DELV_FAIL_NUM=网络失败下发数 --MMS_USER_DELV_FAIL_NUM=用户失败下发数 --MMS_TOTAL_NETWORK_SUCC_RATIO=彩信网络全程接通率 --MMS_TOTAL_USER_SUCC_RATIO=彩信用户全程接通率 --MMS_TOTAL_SUCC_RAIO=彩信全程接通率 --SERVICE_IP=被管设备IP地址
+</select>
+
+SELECT 
+to_char(START_TIME,'yyyy-MM-dd') START_TIME,
+to_char(END_TIME,'yyyy-MM-dd') END_TIME,
+MMS_SEND_NUM,
+MMS_TOP_NUM,
+MMS_REGISTER_USER_NUM,
+USE_MMS_USER_NUM,
+MMS_ALBUM_NUM,
+MMS_ALBUM_SUCC_NUM,
+MMS_ALBUM_SUCC_RATIO,
+MMS_SUBMIT_NUM_2,
+MMS_DELV_NUM_2,
+MMS_NETWOER_SUBMIT_FAIL_NUM,
+MMS_USER_SUBMIT_FAIL_NUM,
+MMS_NETWORK_DELV_FAIL_NUM,
+MMS_USER_DELV_FAIL_NUM,
+MMS_TOTAL_NETWORK_SUCC_RATIO,
+MMS_TOTAL_USER_SUCC_RATIO,
+MMS_TOTAL_SUCC_RAIO,
+SERVICE_IP
+FROM <included id="tableChooseSE"/>
+WHERE 1=1
+<if test=" '@isContinue'=='f' ">
+  and START_TIME in(#discteteTime#)
+</if>        
+<jdbcType name="discteteTime" type="array-date"/>
+union all 
+
+
+//骨干网互联链路带宽利用率超阈值报表
+select TIME_STAMP,
+       B.CITY,
+       B.IP_ADDR,
+       B.SYS_NAME,
+       c.IF_ALIAS,
+       IF_IN_UTILITY,
+       IF_OUT_UTILITY,
+       to_char(max_if_in_time, 'YYYY-MM-DD hh24:mi:ss') max_if_in_time,
+       to_char(max_if_out_time, 'YYYY-MM-DD hh24:mi:ss') max_if_out_time,
+       IF_IN_TRAFFIC,
+       IF_OUT_TRAFFIC,
+       C.IF_NAME,
+       case
+         when instr(10 * c.if_speed / 1024 / 1024 / 1000, 9) = 1 then
+          ROUND(c.if_speed / 1024 / 1024 / 1000)
+         else
+          ROUND(c.if_speed / 1024 / 1024 / 1000)
+       end if_speed
+  from (select 
+         TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周' as TIME_STAMP,
+         A.UUID,
+         ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY,
+         ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,
+         max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc) max_if_in_time,
+         max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc) max_if_out_time,
+         ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,
+         ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC
+          from IPMSDW.DW_FT_RE_ST_INTERFACE_D A,
+               (select uuid
+                  from IPMSDW.DW_FT_RE_ST_INTERFACE_D A,
+                       IPMSDW.O_RM_DEVICE             B,
+                       IPMSDW.O_RM_INTERFACE          c
+                 where c.DEVICE_ID = B.DEVICE_ID
+                   and c.ID = A.UUID
+                   AND CITY IS NOT NULL
+                   and b.SERVICE_SYSTEM_NAME = 'CMNET骨干网业务系统'
+                   and c.IF_ALIAS like '%CMNET%'
+                   and c.if_name like '%/%'
+                   and a.time_stamp >= trunc(sysdate - 7, 'iw')
+                   and time_stamp < trunc(sysdate, 'iw') - 0.0001
+                 group by TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周',
+                          uuid,
+                          B.CITY,
+                          B.SYS_NAME,
+                          B.IP_ADDR,
+                          C.IF_NAME,
+                          c.IF_ALIAS,
+                          c.if_speed
+                having max(A.MAX_IF_IN_UTILITY) > 50 or max(A.MAX_IF_OUT_UTILITY) > 50) B
+         where A.UUID = B.UUID
+           and a.time_stamp >= trunc(sysdate - 7, 'iw')
+           and time_stamp < trunc(sysdate, 'iw') - 0.0001
+         group by TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周', A.UUID) A,
+       IPMSDW.O_RM_DEVICE B,
+       IPMSDW.O_RM_INTERFACE c
+ where c.DEVICE_ID = B.DEVICE_ID
+   and c.ID = A.UUID
+   AND CITY IS NOT NULL
+   and b.SERVICE_SYSTEM_NAME = 'CMNET骨干网业务系统'
+   and c.IF_ALIAS like '%CMNET%'
+   and c.if_name like '%/%'
+union all
+select 
+ '合计' as TIME_STAMP,
+ '--' CITY,
+ '--' IP_ADDR,
+ '--' SYS_NAME,
+ '--' IF_ALIAS,
+ ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY,
+ ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,
+ to_char(max(TIME_STAMP)
+         KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc),
+         'yyyy-MM-dd HH24:mi:ss') max_if_in_time,
+ to_char(max(TIME_STAMP)
+         KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc),
+         'yyyy-MM-dd HH24:mi:ss') max_if_out_time,
+ ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,
+ ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC,
+ '--' IF_NAME,
+ null if_seed
+  from IPMSDW.DW_FT_RE_ST_INTERFACE_D A,
+       (select uuid
+          from IPMSDW.DW_FT_RE_ST_INTERFACE_D A,
+               IPMSDW.O_RM_DEVICE             B,
+               IPMSDW.O_RM_INTERFACE          c
+         where c.DEVICE_ID = B.DEVICE_ID
+           and c.ID = A.UUID
+           AND CITY IS NOT NULL
+           and b.SERVICE_SYSTEM_NAME = 'CMNET骨干网业务系统'
+           and c.IF_ALIAS like '%CMNET%'
+           and c.if_name like '%/%'
+           and a.time_stamp >= trunc(sysdate - 7, 'iw')
+           and time_stamp < trunc(sysdate, 'iw') - 0.0001
+         group by uuid,
+                  B.CITY,
+                  B.SYS_NAME,
+                  B.IP_ADDR,
+                  C.IF_NAME,
+                  c.IF_ALIAS,
+                  c.if_speed
+        having max(A.MAX_IF_IN_UTILITY) > 50 or max(A.MAX_IF_OUT_UTILITY) > 50) B
+ where A.UUID = B.UUID
+   and a.time_stamp >= trunc(sysdate - 7, 'iw')
+   and time_stamp < trunc(sysdate, 'iw') - 0.0001
+ order by TIME_STAMP,
+          IF_IN_UTILITY  desc,
+          IF_OUT_UTILITY desc,
+          CITY,
+          SYS_NAME
+
+
+//骨干网互联链路带宽利用率超阈值报表_正确
+select TIME_STAMP,
+       B.CITY,
+       B.IP_ADDR,
+       B.SYS_NAME,
+       c.IF_ALIAS,
+       IF_IN_UTILITY,
+       IF_OUT_UTILITY,
+       to_char(max_if_in_time, 'YYYY-MM-DD hh24:mi:ss') max_if_in_time,
+       to_char(max_if_out_time, 'YYYY-MM-DD hh24:mi:ss') max_if_out_time,
+       IF_IN_TRAFFIC,
+       IF_OUT_TRAFFIC,
+       C.IF_NAME,
+       case
+         when instr(10 * c.if_speed / 1024 / 1024 / 1000, 9) = 1 then
+          ROUND(c.if_speed / 1024 / 1024 / 1000)
+         else
+          ROUND(c.if_speed / 1024 / 1024 / 1000)
+       end if_speed
+  from (select /*+ no_merge(B) */
+         TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周' as TIME_STAMP,
+         A.UUID,
+         ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY,
+         ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,
+         max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc) max_if_in_time,
+         max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc) max_if_out_time,
+         ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,
+         ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC
+          from ipmsdw.DW_FT_RE_ST_INTERFACE_H A,
+               (select uuid
+                  from IPMSDW.DW_FT_RE_ST_INTERFACE_D A,
+                       IPMSDW.O_RM_DEVICE             B,
+                       IPMSDW.O_RM_INTERFACE          c
+                 where c.DEVICE_ID = B.DEVICE_ID
+                   and c.ID = A.UUID
+                   AND CITY IS NOT NULL
+                   and b.SERVICE_SYSTEM_NAME = 'CMNET骨干网业务系统'
+                   and c.IF_ALIAS like '%CMNET%'
+                   and c.if_name like '%/%'
+                   and a.time_stamp >= trunc(sysdate - 7, 'iw')
+                
+                 group by TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周',
+                          uuid,
+                          B.CITY,
+                          B.SYS_NAME,
+                          B.IP_ADDR,
+                          C.IF_NAME,
+                          c.IF_ALIAS,
+                          c.if_speed
+                having max(A.MAX_IF_IN_UTILITY) > 50 or max(A.MAX_IF_OUT_UTILITY) > 50) B
+         where A.UUID = B.UUID
+           and a.time_stamp >= trunc(sysdate - 7, 'iw')
+        
+         group by TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周', A.UUID) A,
+       IPMSDW.O_RM_DEVICE B,
+       IPMSDW.O_RM_INTERFACE c
+ where c.DEVICE_ID = B.DEVICE_ID
+   and c.ID = A.UUID
+   AND CITY IS NOT NULL
+   and b.SERVICE_SYSTEM_NAME = 'CMNET骨干网业务系统'
+   and c.IF_ALIAS like '%CMNET%'
+   and c.if_name like '%/%'
+union all
+select /*+ no_merge(B) */
+ '合计' as TIME_STAMP,
+ '--' CITY,
+ '--' IP_ADDR,
+ '--' SYS_NAME,
+ '--' IF_ALIAS,
+ ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY,
+ ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,
+ to_char(max(TIME_STAMP)
+         KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc),
+         'yyyy-MM-dd HH24:mi:ss') max_if_in_time,
+ to_char(max(TIME_STAMP)
+         KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc),
+         'yyyy-MM-dd HH24:mi:ss') max_if_out_time,
+ ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,
+ ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC,
+ '--' IF_NAME,
+ null if_seed
+  from ipmsdw.DW_FT_RE_ST_INTERFACE_H A,
+       (select uuid
+          from IPMSDW.DW_FT_RE_ST_INTERFACE_D A,
+               IPMSDW.O_RM_DEVICE             B,
+               IPMSDW.O_RM_INTERFACE          c
+         where c.DEVICE_ID = B.DEVICE_ID
+           and c.ID = A.UUID
+           AND CITY IS NOT NULL
+           and b.SERVICE_SYSTEM_NAME = 'CMNET骨干网业务系统'
+           and c.IF_ALIAS like '%CMNET%'
+           and c.if_name like '%/%'
+           and a.time_stamp >= trunc(sysdate - 7, 'iw')
+        
+         group by uuid,
+                  B.CITY,
+                  B.SYS_NAME,
+                  B.IP_ADDR,
+                  C.IF_NAME,
+                  c.IF_ALIAS,
+                  c.if_speed
+        having max(A.MAX_IF_IN_UTILITY) > 50 or max(A.MAX_IF_OUT_UTILITY) > 50) B
+ where A.UUID = B.UUID
+   and a.time_stamp >= trunc(sysdate - 7, 'iw')
+
+ order by TIME_STAMP,
+          IF_IN_UTILITY  desc,
+          IF_OUT_UTILITY desc,
+          CITY,
+          SYS_NAME
+
+
+//城域网互联链路带宽利用率超阈值报表
+select TIME_STAMP,
+       B.CITY,
+       B.IP_ADDR,
+       B.SYS_NAME,
+       c.IF_ALIAS,
+       IF_IN_UTILITY,
+       IF_OUT_UTILITY,
+       to_char(max_if_in_time, 'YYYY-MM-DD hh24:mi:ss') max_if_in_time,
+       to_char(max_if_out_time, 'YYYY-MM-DD hh24:mi:ss') max_if_out_time,
+       IF_IN_TRAFFIC,
+       IF_OUT_TRAFFIC,
+       C.IF_NAME,
+       case
+         when instr(10 * c.if_speed / 1024 / 1024 / 1000, 9) = 1 then
+          ROUND(c.if_speed / 1024 / 1024 / 1000)
+         else
+          ROUND(c.if_speed / 1024 / 1024 / 1000)
+       end if_speed
+  from (select 
+         TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周' as TIME_STAMP,
+         A.UUID,
+         ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY,
+         ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,
+         max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc) max_if_in_time,
+         max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc) max_if_out_time,
+         ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,
+         ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC
+          from ipmsdw.DW_FT_RE_ST_INTERFACE_H A,
+               (select uuid
+                  from ipmsdw.DW_FT_RE_ST_INTERFACE_D A,
+                       IPMSDW.O_RM_DEVICE             B,
+                       IPMSDW.O_RM_INTERFACE          c
+                 where c.DEVICE_ID = B.DEVICE_ID
+                   and c.ID = A.UUID
+                   AND CITY IS NOT NULL
+                   and b.SERVICE_SYSTEM_NAME = 'CMNET城域网业务系统'
+                   and (SYS_NAME like '%PB-CMNET%' or
+                       SYS_NAME like '%PC-CMNET%' or
+                       SYS_NAME like '%PA-CMNET%' or
+                       SYS_NAME like '%PI-CMNET%' or
+                       SYS_NAME like '%MB-CMNET%' or
+                       SYS_NAME like '%MC-CMNET%' or
+                       SYS_NAME like '%MA-CMNET%')
+                   and c.IF_ALIAS like '%CMNET%'
+                   and c.if_name like '%/%'
+                   and a.time_stamp >= trunc(sysdate - 7, 'iw')
+                   and time_stamp < trunc(sysdate, 'iw') - 0.0001
+                 group by TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周',
+                          uuid,
+                          B.CITY,
+                          B.SYS_NAME,
+                          B.IP_ADDR,
+                          C.IF_NAME,
+                          c.IF_ALIAS,
+                          c.if_speed
+                having max(A.MAX_IF_IN_UTILITY) > 50 or max(A.MAX_IF_OUT_UTILITY) > 50) B
+         where A.UUID = B.UUID
+           and a.time_stamp >= trunc(sysdate - 7, 'iw')
+           and time_stamp < trunc(sysdate, 'iw') - 0.0001
+         group by TO_CHAR(TIME_STAMP, 'yyyy-IW') || '周', A.UUID) A,
+       IPMSDW.O_RM_DEVICE B,
+       IPMSDW.O_RM_INTERFACE c
+ where c.DEVICE_ID = B.DEVICE_ID
+   and c.ID = A.UUID
+   AND CITY IS NOT NULL
+   and b.SERVICE_SYSTEM_NAME = 'CMNET城域网业务系统'
+   and (SYS_NAME like '%PB-CMNET%' or SYS_NAME like '%PC-CMNET%' or
+       SYS_NAME like '%PA-CMNET%' or SYS_NAME like '%PI-CMNET%' or
+       SYS_NAME like '%MB-CMNET%' or SYS_NAME like '%MC-CMNET%' or
+       SYS_NAME like '%MA-CMNET%')
+   and c.IF_ALIAS like '%CMNET%'
+   and c.IF_ALIAS like '%CMNET%'
+   and c.if_name like '%/%'
+union all
+select
+ '合计' as TIME_STAMP,
+ '--' CITY,
+ '--' IP_ADDR,
+ '--' SYS_NAME,
+ '--' IF_ALIAS,
+ ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY,
+ ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,
+ to_char(max(TIME_STAMP)
+         KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc),
+         'yyyy-MM-dd HH24:mi:ss') max_if_in_time,
+ to_char(max(TIME_STAMP)
+         KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc),
+         'yyyy-MM-dd HH24:mi:ss') max_if_out_time,
+ ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,
+ ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC,
+ '--' IF_NAME,
+ null if_seed
+  from ipmsdw.DW_FT_RE_ST_INTERFACE_H A,
+       (select uuid
+          from ipmsdw.DW_FT_RE_ST_INTERFACE_D A,
+               IPMSDW.O_RM_DEVICE             B,
+               IPMSDW.O_RM_INTERFACE          c
+         where c.DEVICE_ID = B.DEVICE_ID
+           and c.ID = A.UUID
+           AND CITY IS NOT NULL
+           and b.SERVICE_SYSTEM_NAME = 'CMNET城域网业务系统'
+           and (SYS_NAME like '%PB-CMNET%' or SYS_NAME like '%PC-CMNET%' or
+               SYS_NAME like '%PA-CMNET%' or SYS_NAME like '%PI-CMNET%' or
+               SYS_NAME like '%MB-CMNET%' or SYS_NAME like '%MC-CMNET%' or
+               SYS_NAME like '%MA-CMNET%')
+           and c.IF_ALIAS like '%CMNET%'
+           and c.IF_ALIAS like '%CMNET%'
+           and c.if_name like '%/%'
+           and a.time_stamp >= trunc(sysdate - 7, 'iw')
+           and time_stamp < trunc(sysdate, 'iw') - 0.0001
+         group by uuid,
+                  B.CITY,
+                  B.SYS_NAME,
+                  B.IP_ADDR,
+                  C.IF_NAME,
+                  c.IF_ALIAS,
+                  c.if_speed
+        having max(A.MAX_IF_IN_UTILITY) > 50 or max(A.MAX_IF_OUT_UTILITY) > 50) B
+ where A.UUID = B.UUID
+   and a.time_stamp >= trunc(sysdate - 7, 'iw')
+   and time_stamp < trunc(sysdate, 'iw') - 0.0001
+ order by TIME_STAMP,
+          IF_IN_UTILITY  desc,
+          IF_OUT_UTILITY desc,
+          CITY,
+          SYS_NAME
+
+//城域网互联链路带宽利用率超阈值报表_原来
+<jdbcType name="discteteTime" type="array-date"/>
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='min' ">ipmsdw.DW_FT_RE_ST_INTERFACE_5M</if>
+    <if test=" '@timeType'=='hour' ">ipmsdw.DW_FT_RE_ST_INTERFACE_H</if>
+    <if test=" '@timeType'=='day' ">ipmsdw.DW_FT_RE_ST_INTERFACE_D</if>
+    <if test=" '@timeType'=='week' ">ipmsdw.DW_FT_RE_ST_INTERFACE_D</if>
+</select>
+
+<select id="resultMapping">
+    --TIME_STAMP=时间 --CITY=地市 --SYS_NAME=系统名称 --IP_ADDR=IP地址 --IF_NAME=SRVCC切入接受次数 --IF_ALIAS=SRVCC切入接受率(%) --INTERFACE_IP_ADDR=SRVCC切入完成次数 --DAIKUAN=SRVCC切入完成率(%) --IF_OUT_UTILITY=接口流出利用率 --MAX_IF_OUT_UTILITY=接口流出利用率（最大） --IF_IN_DISCARDS=接口流入丢包率 --IF_IN_UNKOWN_PT=接口流入未知协议率 --IF_OUT_TRAFFIC=接口流出速率 --MAX_IF_OUT_TRAFFIC=接口流出速率（最大） --IF_OUT_NUCAST=接口流出非单波比率 --IF_OUT_UCAST=接口流出单波比率 --IF_IN_TRAFFIC=接口流入速率 --MAX_IF_IN_TRAFFIC=接口流入速率（最大） --IF_IN_UTILITY=接口流入利用率 --MAX_IF_IN_UTILITY=接口流入利用率（最大） --LIURUZIJ=流入总计 --LIUCUZIJ=流出总计 --MAX_IF_IN_DISCARDS=接口流入丢包率（最大） --IF_IN_ERROR=接口流入错包率 --MAX_IF_IN_ERROR=接口流入错包率（最大） --IF_OUT_DISCARDS=接口流出丢包率 --MAX_IF_OUT_DISCARDS=接口流出丢包率（最大） --IF_OUT_ERROR=接口流出错包率 --MAX_IF_OUT_ERROR=接口流出错包率（最大） --IF_SPEED=采集的接口速率 --IF_DESCR=接口描述 --
+</select>
+
+
+
+
+
+select 
+<if3 test=" '@timeType'=='min' "> to_char(TIME_STAMP,'yyyy-MM-dd HH24:mi:ss') as TIME_STAMP,</if3>
+       <if1 test=" '@timeType'=='hour' "> to_char(time_stamp,'yyyy-mm-dd hh24') as TIME_STAMP,</if1>
+       <if4 test=" '@timeType'=='day' ">to_char(time_stamp,'yyyy-mm-dd') as TIME_STAMP,</if4>
+
+ B.CITY, B.IP_ADDR,B.SYS_NAME, c.IF_ALIAS, IF_IN_UTILITY, IF_OUT_UTILITY, to_char( max_if_in_time,'YYYY-MM-DD hh24:mi:ss') max_if_in_time,to_char( max_if_out_time,'YYYY-MM-DD hh24:mi:ss') max_if_out_time,IF_IN_TRAFFIC, IF_OUT_TRAFFIC, C.IF_NAME, 
+    case when instr(10 * c.if_speed / 1024 / 1024 / 1000, 9) = 1 then ROUND(c.if_speed / 1024 / 1024 / 1000) else ROUND(c.if_speed / 1024 / 1024 / 1000) end if_speed 
+    from (select TO_CHAR(TIME_STAMP,'yyyy-IW')||'周' as TIME_STAMP, A.UUID, 
+          ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY, ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc) max_if_in_time, 
+          max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc) max_if_out_time, 
+          ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC  from <included id="tableChooseSE"/> A,(select uuid 
+          from <included id="tableChooseSE"/> A, ipmsdw.O_RM_DEVICE B, ipmsdw.O_RM_INTERFACE c  where 
+              c.DEVICE_ID = B.DEVICE_ID and c.ID = A.UUID AND CITY IS NOT NULL  
+              and b.SERVICE_SYSTEM_NAME='CMNET城域网业务系统'  
+              and (SYS_NAME like '%PB-CMNET%' or SYS_NAME like '%PC-CMNET%' 
+                or SYS_NAME like '%PA-CMNET%' or  SYS_NAME like '%PI-CMNET%' 
+                or SYS_NAME like '%MB-CMNET%' or SYS_NAME like'%MC-CMNET%' 
+                or SYS_NAME like '%MA-CMNET%') 
+              and c.IF_ALIAS like '%CMNET%' 
+              and  c.if_name  like '%/%' 
+              <if test=" '@isContinue'=='t' ">
+                  and A.TIME_STAMP between to_date(#startTime#,'yyyymmddhh24miss') and  to_date(#endTime#,'yyyymmddhh24miss')
+              </if>
+              <if test=" '@isContinue'=='f' ">
+                  and A.TIME_STAMP in (#discteteTime#)
+              </if> 
+
+group by 
+TIME_STAMP,
+uuid ,B.CITY,B.SYS_NAME, B.IP_ADDR,C.IF_NAME,c.IF_ALIAS,
+c.if_speed having max(A.MAX_IF_IN_UTILITY) > 50 
+or max(A.MAX_IF_OUT_UTILITY) > 50)B  
+          where A.UUID = B.UUID   
+          <if test=" '@isContinue'=='t' ">
+              and A.TIME_STAMP between to_date(#startTime#,'yyyymmddhh24miss') and  to_date(#endTime#,'yyyymmddhh24miss')
+          </if>
+          <if test=" '@isContinue'=='f' ">
+              and A.TIME_STAMP in (#discteteTime#)
+          </if>  
+group by 
+TIME_STAMP,
+ A.UUID) A,   ipmsdw.O_RM_DEVICE B, ipmsdw.O_RM_INTERFACE c 
+    where  c.DEVICE_ID = B.DEVICE_ID and c.ID = A.UUID AND CITY IS NOT NULL 
+    and b.SERVICE_SYSTEM_NAME='CMNET城域网业务系统'  
+    and (SYS_NAME like '%PB-CMNET%' or SYS_NAME like '%PC-CMNET%' 
+      or SYS_NAME like '%PA-CMNET%' or  SYS_NAME like '%PI-CMNET%' 
+      or SYS_NAME like '%MB-CMNET%' 
+      or SYS_NAME like'%MC-CMNET%' or SYS_NAME like '%MA-CMNET%') 
+    and c.IF_ALIAS like '%CMNET%' and c.IF_ALIAS like '%CMNET%'
+    and c.if_name like '%/%'  
+    union all
+ select  '合计' as TIME_STAMP,'--' CITY, '--'  IP_ADDR,'--'  SYS_NAME,'--' IF_ALIAS, 
+             ROUND(max(A.IF_IN_UTILITY), 2) IF_IN_UTILITY, ROUND(max(A.IF_OUT_UTILITY), 2) IF_OUT_UTILITY,
+             to_char(max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_IN_UTILITY desc), 'yyyy-MM-dd HH24:mi:ss') max_if_in_time, 
+             to_char(max(TIME_STAMP) KEEP(DENSE_RANK first order by A.IF_OUT_UTILITY desc), 'yyyy-MM-dd HH24:mi:ss') max_if_out_time, 
+             ROUND(max(A.IF_IN_TRAFFIC / 1024 / 1024 / 1000), 2) IF_IN_TRAFFIC,
+             ROUND(max(A.IF_OUT_TRAFFIC / 1024 / 1024 / 1000), 2) IF_OUT_TRAFFIC,'--' IF_NAME,
+             null if_seed 
+             from <included id="tableChooseSE"/> A,
+             (select uuid 
+             from <included id="tableChooseSE"/> A, ipmsdw.O_RM_DEVICE B, ipmsdw.O_RM_INTERFACE c 
+             where   c.DEVICE_ID = B.DEVICE_ID and c.ID = A.UUID AND CITY IS NOT NULL 
+             and b.SERVICE_SYSTEM_NAME='CMNET城域网业务系统'  
+             and (SYS_NAME like '%PB-CMNET%' or SYS_NAME like '%PC-CMNET%' 
+              or SYS_NAME like '%PA-CMNET%' or  SYS_NAME like '%PI-CMNET%' 
+              or SYS_NAME like '%MB-CMNET%' or SYS_NAME like'%MC-CMNET%' 
+              or SYS_NAME like '%MA-CMNET%') and c.IF_ALIAS like '%CMNET%' 
+             and c.IF_ALIAS like '%CMNET%' and  c.if_name  like '%/%' 
+             <if test=" '@isContinue'=='t' ">
+                 and A.TIME_STAMP between to_date(#startTime#,'yyyymmddhh24miss') and  to_date(#endTime#,'yyyymmddhh24miss')
+             </if>
+             <if test=" '@isContinue'=='f' ">
+                  and A.TIME_STAMP in (#discteteTime#)
+             </if>  
+             group by 
+             uuid ,B.CITY,B.SYS_NAME, B.IP_ADDR,C.IF_NAME,
+             c.IF_ALIAS,
+             c.if_speed having max(A.MAX_IF_IN_UTILITY) > 50 or max(A.MAX_IF_OUT_UTILITY) > 50)B 
+              where A.UUID = B.UUID 
+              <if test=" '@isContinue'=='t' ">
+                  and A.TIME_STAMP between to_date(#startTime#,'yyyymmddhh24miss') and  to_date(#endTime#,'yyyymmddhh24miss')
+              </if>
+              <if test=" '@isContinue'=='f' ">
+                   and A.TIME_STAMP in (#discteteTime#)
+              </if>  
+             order by TIME_STAMP, IF_IN_UTILITY desc,IF_OUT_UTILITY desc ,CITY, SYS_NAME 

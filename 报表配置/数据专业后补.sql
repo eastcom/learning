@@ -854,3 +854,33 @@ from <included id="tableChooseSE"/> where 1=1
     and USER_TIME in (#discteteTime#)
 </if> 
 <jdbcType name="discteteTime" type="array-date"/>
+
+
+//重要SP成功率定制报表_正确
+<select id="tableChooseSE">    
+     <if test=" '@timeType'=='min' ">ipmsdw.O_RE_ST_BRAS_VPDN_USER_15M</if>
+     <if test=" '@timeType'=='hour' ">IPMSDM.DM_CMNET_CPU_MEM_KPI_H</if>
+     <if test=" '@timeType'=='day' ">IPMSDM.DM_MMS_EXT_SH_SPRATE_D</if>   
+</select>
+
+
+<select id="resultMapping">
+ --STARTTIME=日期 --SERVICE_IP=彩信中心 --SSPCODE=手机冲浪 --SREMARK=手机阅读 --SSPDESC=彩信账单 --IAOCOUNT=手机商界 --IMTRECVRATE=生活播报
+</select>
+
+select 
+to_char(STARTTIME, 'yyyy-mm-dd') STARTTIME,
+SERVICE_IP,
+SSPCODE,
+SREMARK,
+SSPDESC
+IAOCOUNT,
+IMTRECVRATE
+from <included id="tableChooseSE"/> where 1=1
+<if test=" '@isContinue'=='t' ">
+    and TIME_ID between to_number(#startTime#) and to_number(#endTime#)
+</if>
+<if test=" '@isContinue'=='f' ">
+    and STARTTIME in (#discteteTime#)
+</if> 
+<jdbcType name="discteteTime" type="array-date"/>
