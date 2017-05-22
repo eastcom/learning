@@ -1,3 +1,54 @@
+//bras地址报表_日
+select to_char(time_stamp, 'yyyy-MM-dd') time_stamp,
+       device_name,
+       agent_desc,
+       ALL_ADDR_INPOOL,
+       DOMAIN_ONLINE_USER,
+       max_addr_rate,
+       max_addr_time,
+       DOMAIN_ONLINE_USER2,
+       alladdressnum,
+       onlineusernum,
+       addrusedrate,
+       max_time,
+       onlineusernum2
+  from IPMSDM.DM_CMNET_BRAS_D
+ where TIME_STAMP >=trunc(sysdate-1)
+   and TIME_STAMP < trunc(sysdate)
+    union all
+select '合计',
+       '---',
+       '---',
+       sum(ALL_ADDR_INPOOL),
+       sum(DOMAIN_ONLINE_USER),
+       
+       decode(sum(ALL_ADDR_INPOOL),0,0,round(sum(DOMAIN_ONLINE_USER) / sum(ALL_ADDR_INPOOL) * 100, 2)),
+       '---',
+       sum(DOMAIN_ONLINE_USER2),
+       sum(alladdressnum),
+       sum(onlineusernum),
+      decode(sum(alladdressnum),0,0, round(sum(onlineusernum) / sum(alladdressnum) * 100, 2)),
+       '合计',
+       sum(onlineusernum2)
+  from (select to_char(time_stamp, 'yyyy-MM-dd') time_stamp,
+               device_name,
+               agent_desc,
+               ALL_ADDR_INPOOL,
+               DOMAIN_ONLINE_USER,
+               max_addr_rate,
+               max_addr_time,
+               DOMAIN_ONLINE_USER2,
+               alladdressnum,
+               onlineusernum,
+               addrusedrate,
+               max_time,
+               onlineusernum2
+          from IPMSDM.DM_CMNET_BRAS_D
+        where TIME_STAMP >=trunc(sysdate-1)
+   and TIME_STAMP < trunc(sysdate))
+ order by time_stamp, max_addr_time    desc
+
+
 //设备端口流量统计报表
 <select id="tableChooseSE">
     <if test=" '@timeType'=='min' ">ipmsdw.DW_FT_RE_ST_INTERFACE_5M</if>
@@ -304,6 +355,60 @@ select            <if3 test=" '@timeType'=='min' "> to_char(A.TIME_STAMP,'yyyy-M
                           INTERFACE_IP_ADDR
 
 
+
+//MX960端口利用率统计报表_512
+<select id="tableChooseSE">
+    <if test=" '@timeType'=='min' ">ipmsdw.DW_FT_RE_ST_INTERFACE_5M</if>
+    <if test=" '@timeType'=='hour' ">ipmsdw.DW_FT_RE_ST_INTERFACE_H</if>
+    <if test=" '@timeType'=='day' ">ipmsdw.DW_FT_RE_ST_INTERFACE_D</if>
+</select>
+
+<select id="resultMapping">
+    --TIME_STAMP=时间 --CITY=地市 --SYS_NAME=设备名称 --IP_ADDR=IP地址 --IF_NAME=SRVCC切入接受次数 --IF_ALIAS=SRVCC切入接受率(%) --INTERFACE_IP_ADDR=SRVCC切入完成次数 --DAIKUAN=SRVCC切入完成率(%) --IF_OUT_UTILITY=接口流出利用率 --MAX_IF_OUT_UTILITY=接口流出利用率（最大） --IF_IN_DISCARDS=接口流入丢包率 --IF_IN_UNKOWN_PT=接口流入未知协议率 --IF_OUT_TRAFFIC=接口流出速率 --MAX_IF_OUT_TRAFFIC=接口流出速率（最大） --IF_OUT_NUCAST=接口流出非单波比率 --IF_OUT_UCAST=接口流出单波比率 --IF_IN_TRAFFIC=接口流入速率 --MAX_IF_IN_TRAFFIC=接口流入速率（最大） --IF_IN_UTILITY=接口流入利用率 --MAX_IF_IN_UTILITY=接口流入利用率（最大） --LIURUZIJ=流入总计 --LIUCUZIJ=流出总计 --MAX_IF_IN_DISCARDS=接口流入丢包率（最大） --IF_IN_ERROR=接口流入错包率 --MAX_IF_IN_ERROR=接口流入错包率（最大） --IF_OUT_DISCARDS=接口流出丢包率 --MAX_IF_OUT_DISCARDS=接口流出丢包率（最大） --IF_OUT_ERROR=接口流出错包率 --MAX_IF_OUT_ERROR=接口流出错包率（最大） --IF_DESCR=接口描述 --MAX_IF_IN_TIME=流入峰值发生时间 --MAX_IF_OUT_TIME=流出峰值发生时间
+</select>
+
+
+
+
+
+select 
+ <if3 test=" '@timeType'=='min' "> to_char(TIME_STAMP,'yyyy-MM-dd HH24:mi:ss') as TIME_STAMP,</if3>
+       <if1 test=" '@timeType'=='hour' "> to_char(time_stamp,'yyyy-mm-dd hh24') as TIME_STAMP,</if1>
+       <if4 test=" '@timeType'=='day' ">to_char(time_stamp,'yyyy-mm-dd') as TIME_STAMP,</if4>
+
+       a.SYS_NAME,
+       a.IP_ADDR,
+       b.IF_DESCR IF_DESCR,
+     
+       round(100 * IF_IN_TRAFFIC / IF_SPEED,3) IF_IN_UTILITY,
+       round(100 * MAX_IF_IN_TRAFFIC / IF_SPEED,3) MAX_IF_IN_UTILITY,
+       round(100 * IF_OUT_TRAFFIC / IF_SPEED,3) IF_OUT_UTILITY,
+       round(100 * MAX_IF_OUT_TRAFFIC / IF_SPEED,3) MAX_IF_OUT_UTILITY,
+      round (IF_IN_DISCARDS,3) IF_IN_DISCARDS,
+       round(MAX_IF_IN_DISCARDS,3) MAX_IF_IN_DISCARDS,
+       round(IF_IN_ERROR,3) IF_IN_ERROR,
+      round (MAX_IF_IN_ERROR,3) MAX_IF_IN_ERROR,
+       
+       round(MAX_IF_OUT_DISCARDS,3) MAX_IF_OUT_DISCARDS,
+      round (IF_OUT_ERROR,3) IF_OUT_ERROR
+  from ipmsdw.O_RM_DEVICE a, ipmsdw.O_RM_INTERFACE b, <included id="tableChooseSE"/> c
+ WHERE 1=1
+<isNotEmpty property="qry_0">
+   AND a.ip_addr in (#qry_0#)
+</isNotEmpty>
+
+   and a.device_id = b.device_id
+   and b.if_alias is not null
+   and a.device_id = c.device_uuid
+   and b.id = c.uuid
+   <if test=" '@isContinue'=='t' ">
+    and TIME_STAMP between to_date(#startTime#,'yyyymmddhh24miss') and  to_date(#endTime#,'yyyymmddhh24miss')
+</if>
+<if test=" '@isContinue'=='f' ">
+    and TIME_STAMP in (#discteteTime#)
+</if> 
+<jdbcType name="discteteTime" type="array-date"/>
+   order by  MAX_IF_IN_UTILITY desc,time_stamp 
 //MX960端口利用率统计报表
 <select id="tableChooseSE">
     <if test=" '@timeType'=='min' ">ipmsdw.DW_FT_RE_ST_INTERFACE_5M</if>
